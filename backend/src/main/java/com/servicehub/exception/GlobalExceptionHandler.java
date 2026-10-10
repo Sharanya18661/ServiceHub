@@ -1,5 +1,6 @@
 package com.servicehub.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -55,12 +56,29 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Bad Request");
+
+        String msg = "A database constraint was violated.";
+        String fullErr = (ex.getMessage() != null ? ex.getMessage() : "") + 
+                         (ex.getCause() != null && ex.getCause().getMessage() != null ? ex.getCause().getMessage() : "");
+        if (fullErr.toLowerCase().contains("email") || fullErr.toLowerCase().contains("users")) {
+            msg = "An account with this email address already exists.";
+        }
+        body.put("message", msg);
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, Object> body = new HashMap<>();
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
+            String fieldName = error instanceof FieldError ? ((FieldError) error).getField() : error.getObjectName();
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
@@ -68,6 +86,8 @@ public class GlobalExceptionHandler {
         body.put("status", HttpStatus.BAD_REQUEST.value());
         body.put("error", "Validation Error");
         body.put("errors", errors);
+        String summaryMessage = errors.values().stream().findFirst().orElse("Validation failed. Please check your inputs.");
+        body.put("message", summaryMessage);
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 

@@ -44,6 +44,25 @@ export const Login = () => {
     }
   };
 
+  const extractErrorMessage = (err, defaultMsg) => {
+    if (err.response?.data) {
+      const data = err.response.data;
+      if (data.message) return data.message;
+      if (data.errors && typeof data.errors === 'object') {
+        const messages = Object.values(data.errors);
+        if (messages.length > 0) return messages.join('. ');
+      }
+      if (typeof data === 'string') return data;
+    }
+    if (err.message && err.message !== 'Network Error') {
+      return err.message;
+    }
+    if (err.message === 'Network Error' || !err.response) {
+      return 'Unable to connect to backend server. Please check your network connection or CORS configuration.';
+    }
+    return defaultMsg;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -59,7 +78,7 @@ export const Login = () => {
         navigate('/customer/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      setError(extractErrorMessage(err, 'Invalid email or password'));
     } finally {
       setLoading(false);
     }

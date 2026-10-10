@@ -59,12 +59,20 @@ public class AuthService {
         ProviderStatus providerStatus = null;
 
         if (request.getRole() == Role.PROVIDER) {
+            String bName = request.getBusinessName();
+            if (bName == null || bName.isBlank()) {
+                bName = request.getName() + " Services";
+            }
+            String cityVal = request.getCity();
+            if (cityVal == null || cityVal.isBlank()) {
+                cityVal = request.getAddress();
+            }
             ProviderProfile profile = new ProviderProfile(
                     user,
-                    request.getBusinessName() != null ? request.getBusinessName() : request.getName() + " Services",
+                    bName,
                     request.getBio(),
                     request.getExperienceYears() != null ? request.getExperienceYears() : 1,
-                    request.getCity() != null ? request.getCity() : request.getAddress()
+                    cityVal
             );
             profile = providerProfileRepository.save(profile);
             providerId = profile.getId();
